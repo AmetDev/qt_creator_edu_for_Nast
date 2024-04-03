@@ -118,29 +118,30 @@ void FormTable::setIsAdmin(const QString& value) {
 }
 
 
+
+
 void FormTable::connectToDB() {
     QSqlDatabase db = QSqlDatabase::addDatabase("QSQLITE");
     db.setDatabaseName(globalPath::getDatabasePath());
     if (!db.open()) {
-        QMessageBox::critical(this, "Error", "Error opening database: " + db.lastError().text());
+        QMessageBox::critical(this, "Ошибка", "Ошибка при открытии базы данных: " + db.lastError().text());
         return;
     }
 
     QSqlQuery query("SELECT name FROM sqlite_master WHERE type='table'");
+    QHBoxLayout *horizontalLayout = new QHBoxLayout; // Создаем горизонтальный контейнер
     while (query.next()) {
         QString tableName = query.value(0).toString();
-        if (tableName != "users" && tableName != "sqlite_sequence") { // Exclude the 'users' table and 'sqlite_sequence' table
+        if (tableName != "users" && tableName != "sqlite_sequence") { // Исключаем таблицу 'users' и 'sqlite_sequence'
             QPushButton *button = new QPushButton(tableName);
-            ui->verticalLayout->addWidget(button); // Assuming you have a QVBoxLayout named verticalLayout in your form
+            horizontalLayout->addWidget(button); // Добавляем кнопку в горизонтальный контейнер
             connect(button, &QPushButton::clicked, this, [this, tableName]() {
                 updateTableView(tableName);
-            connect(deleteButton, &QPushButton::clicked, this, &FormTable::tableButtonClicked);
             });
         }
     }
-
+    ui->verticalLayout->addLayout(horizontalLayout); // Добавляем горизонтальный контейнер в вертикальный контейнер
 }
-
 void FormTable::deleteData() {
     if (userStatus_ == 2) {
         QMessageBox::critical(this, "Access Denied", "You don't have permission to delete data.");
@@ -165,10 +166,10 @@ void FormTable::deleteDataById(const QString& tableName, int id) {
     QSqlQuery query;
     QString name_id;
     qDebug() << tableName;
-    if(tableName == "Workers") {
-        name_id = "worker";
-    } else if(tableName == "Patients") {
-        name_id = "patient";
+    if(tableName == "Врачи") {
+        name_id = "врач";
+    } else if(tableName == "Пациенты") {
+        name_id = "пациент";
     } else if (tableName == "Doctors") {
         name_id = "doctor";
     }
@@ -184,7 +185,7 @@ void FormTable::deleteDataById(const QString& tableName, int id) {
 
 
     qDebug() << "Binding id:" << id; // Отладочное сообщение для отображения значения id
-    QString tableName2 = ui->labelTable->text().toLower();
+    QString tableName2 = ui->labelTable->text();
     qDebug() <<"table"<<tableName2;
     updateTableView(tableName2);
     // Выполняем запрос
@@ -192,11 +193,12 @@ void FormTable::deleteDataById(const QString& tableName, int id) {
 
         QMessageBox::information(this, "Success", "Data with ID " + QString::number(id) + " deleted successfully.");
         // Опционально обновляем представление таблицы после успешного удаления
+        updateTableView(tableName2);
 
     } else {
         QMessageBox::critical(this, "Error", "Failed to delete data with ID " + QString::number(id) + ": " + query.lastError().text());
     }
-    updateTableView(tableName2);
+
 }
 
 
@@ -206,7 +208,7 @@ void FormTable::updateData(const QList<QPair<QString, QWidget*>>& inputWidgets) 
         QMessageBox::critical(this, "Access Denied", "You don't have permission to delete data.");
         return;
     }
-    QString tableName = ui->labelTable->text().toLower(); // Получаем имя текущей таблицы
+    QString tableName = ui->labelTable->text(); // Получаем имя текущей таблицы
     QModelIndex index = ui->tableView->selectionModel()->currentIndex();
     int id = index.sibling(index.row(), 0).data().toInt(); // Assuming id is in the first column
 
@@ -219,27 +221,52 @@ void FormTable::updateData(const QList<QPair<QString, QWidget*>>& inputWidgets) 
         const QWidget* widget = pair.second;
 
         if (const QLineEdit* lineEdit = qobject_cast<const QLineEdit*>(widget)) {
+            QString text = lineEdit->text();
+            if (text.isEmpty()) {
+                QMessageBox::critical(this, "Ошибка", "Поле '" + fieldName + "' пустое.");
+                return;
+            }
             fieldNames.append(fieldName);
-            fieldValues.append(lineEdit->text());
+            fieldValues.append(text);
         } else if (const QDateEdit* dateEdit = qobject_cast<const QDateEdit*>(widget)) {
+            QDate date = dateEdit->date();
+            if (!date.isValid()) {
+                QMessageBox::critical(this, "Ошибка", "Поле '" + fieldName + "' содержит некорректную дату.");
+                return;
+            }
             fieldNames.append(fieldName);
-            fieldValues.append(dateEdit->date().toString("yyyy-MM-dd"));
+            fieldValues.append(date.toString("yyyy-MM-dd"));
         } else if (const QComboBox* comboBox = qobject_cast<const QComboBox*>(widget)) {
+            QString currentText = comboBox->currentText();
+            if (currentText.isEmpty()) {
+                QMessageBox::critical(this, "Ошибка", "Поле '" + fieldName + "' пустое.");
+                return;
+            }
             fieldNames.append(fieldName);
-            fieldValues.append(comboBox->currentText());
+            fieldValues.append(currentText);
         }
     }
 
     // Проверяем, что есть поля для обновления
     if (fieldNames.isEmpty() || fieldValues.isEmpty()) {
-        QMessageBox::critical(this, "Error", "No fields to update.");
+        QMessageBox::critical(this, "Ошибка", "Нет полей для обновления.");
         return;
     }
 
     QString labelText = ui->labelTable->text(); // Преобразуем текст в нижний регистр
 
     // Создаем SQL-запрос для обновления данных
-    QString name_id = (labelText == "workers") ? "worker" : labelText;
+    QString name_id;
+    if(tableName == "Врачи") {
+        name_id = "врач";
+    } else if(tableName == "Пациенты") {
+        name_id = "пациент";
+    } else if (tableName == "Doctors") {
+        name_id = "doctor";
+    }
+    else {
+        name_id = tableName;
+    }
     qDebug() << "Table Label: " << labelText;
     qDebug() << "ID Label: " << name_id;
     qDebug() << "Field Names: " << fieldNames;
@@ -263,28 +290,19 @@ void FormTable::updateData(const QList<QPair<QString, QWidget*>>& inputWidgets) 
     updateTableView(labelText); // Обновляем представление таблицы
     if (query.exec()) {
         QMessageBox::information(this, "Success", "Data updated successfully.");
-        updateTableView(tableName); // Обновляем представление таблицы
     } else {
         QMessageBox::critical(this, "Error", "Failed to update data: " + query.lastError().text());
     }
+    updateTableView(labelText);
 
     // Закрываем запрос
-   // query.finish();
+    // query.finish();
 }
 
 
 // Определение слота для обновления данных
 
 void FormTable::updateTableView(const QString& tableName) {
-    // Очистка предыдущих виджетов и кнопки перед созданием новых
-    QLayoutItem *oldItem;
-    while ((oldItem = ui->verticalLayout_2->takeAt(0)) != nullptr) {
-        delete oldItem->widget();
-        delete oldItem;
-    }
-
-    // Создание новых виджетов и кнопки
-    // ... ваш код создания виджетов и кнопки ...
 
     QSqlQuery query;
     if (!query.exec("SELECT * FROM " + tableName)) {
@@ -398,8 +416,8 @@ void FormTable::updateTableView(const QString& tableName) {
             }
         });
 
-        QPushButton *sortByAscendingButton = new QPushButton("Сортировка по возрастанию");
-        QPushButton *sortByDescendingButton = new QPushButton("Сортировка по убыванию");
+        QPushButton *sortByAscendingButton = new QPushButton("Сортировка по возрастанию цены приема");
+        QPushButton *sortByDescendingButton = new QPushButton("Сортировка по убыванию цены приема");
 
         // Добавляем элементы управления на форму
         layout->addWidget(sortByAscendingButton);
@@ -446,7 +464,7 @@ void FormTable::updateTableView(const QString& tableName) {
             if (sumQuery.exec("SELECT SUM(стоимость_приема * (100 - " + QString::number(percent) + ") / 100) FROM Прием WHERE ФИО_врача_combox = '" + doctorName + "'")) {
                 if (sumQuery.next()) {
                     double totalCost = sumQuery.value(0).toDouble();
-                    QMessageBox::information(this, "зарплата врача", "зарплата врача " + doctorName + " с " + QString::number(percent) + "%  с процентами" + QString::number(totalCost) +" руб.");
+                    QMessageBox::information(this, "зарплата врача", "зарплата врача " + doctorName + " с " + QString::number(percent) + "%  с процентами " + QString::number(totalCost) +" руб.");
                 }
             } else {
                 qDebug() << "Error executing query:" << sumQuery.lastError().text();
@@ -470,6 +488,8 @@ void FormTable::updateTableView(const QString& tableName) {
 
     // Add a QPushButton to submit data
     QPushButton *submitButton = new QPushButton("ДОБАВИТЬ");
+    submitButton->setFixedSize(100, 30);
+
     ui->verticalLayout_2->addWidget(submitButton);
     // Подключение кнопки update к слоту updateData
     // Удаление старых соединений
@@ -491,245 +511,13 @@ void FormTable::updateTableView(const QString& tableName) {
     ui->tableView->setModel(model); // Assuming you have a QTableView named tableView in your form
 }
 
-// void FormTable::updateTableView(const QString& tableName) {
-//     // Очистка предыдущих виджетов и кнопки перед созданием новых
-//     QLayoutItem *oldItem;
-//     while ((oldItem = ui->verticalLayout_2->takeAt(0)) != nullptr) {
-//         delete oldItem->widget();
-//         delete oldItem;
-//     }
-
-//     // Создание новых виджетов и кнопки
-//     // ... ваш код создания виджетов и кнопки ...
-
-//     QSqlQuery query;
-//     if (!query.exec("SELECT * FROM " + tableName)) {
-//         qDebug() << "Error executing query:" << query.lastError().text();
-//         return;
-//     }
-//     QSqlRecord record = query.record();
-
-//     // Set the label text to the current table name
-//     ui->labelTable->setText(tableName); // Assuming labelTable is the name of your QLabel
-
-//     // Create delete data button if it doesn't exist
-//     if (!deleteButton) {
-//         deleteButton = new QPushButton("УДАЛИТЬ");
-//         ui->verticalLayout_3->addWidget(deleteButton);
-
-//         // Connect the delete button to the deleteData slot
-//         connect(deleteButton, &QPushButton::clicked, this, &FormTable::deleteData);
-//     }
-
-//     // Update input fields
-//     QVBoxLayout *layout = new QVBoxLayout();
-//     QList<QPair<QString, QWidget*>> inputWidgets; // Store input widgets to access them later
-//     for (int i = 0; i < record.count(); ++i) {
-//         QString fieldName = record.fieldName(i);
-//         if (fieldName.startsWith("id"))
-//             continue; // Skip fields starting with 'id'
-//         QLabel *label = new QLabel(fieldName);
-//         layout->addWidget(label);
-
-//         QWidget *widget = nullptr;
-//         if (fieldName.startsWith("data")) {
-//             QDateEdit *dateEdit = new QDateEdit();
-//             widget = dateEdit;
-//         } else if (fieldName.contains("combox")) {
-//             QComboBox *comboBox = new QComboBox();
-//             // Execute SQL query to populate comboBox
-//             QString queryText;
-//             if (fieldName == "patientFullname_combox") {
-//                 queryText = "SELECT DISTINCT patient_fullname FROM Patients";
-//             } else  if (fieldName == "doctorFullname_combox") {
-//                 queryText = "SELECT DISTINCT doctor_fullname FROM Doctors";
-//             }
-//             qDebug() << "Executing query:" << queryText;
-//             QSqlQuery comboQuery(queryText);
-//             if (!comboQuery.exec()) {
-//                 qDebug() << "Error executing query:" << comboQuery.lastError().text();
-//                 continue;
-//             }
-//             while (comboQuery.next()) {
-//                 QString value = comboQuery.value(0).toString();
-//                 qDebug() << "Value:" << value;
-//                 comboBox->addItem(value);
-//             }
-//             widget = comboBox;
-//         } else {
-//             QLineEdit *lineEdit = new QLineEdit();
-//             widget = lineEdit;
-//         }
-
-//         layout->addWidget(widget);
-//         inputWidgets.append(qMakePair(fieldName, widget)); // Store the widget with the field name
-//     }
-//     if (tableName == "Doctors") {
-//         QLabel *searchLabel = new QLabel("Поиск докторов по специальности:");
-//         QLineEdit *searchLineEdit = new QLineEdit();
-//         QPushButton *searchButton = new QPushButton("Поиск докторов");
-
-//         // Добавляем элементы управления на форму
-//         layout->addWidget(searchLabel);
-//         layout->addWidget(searchLineEdit);
-//         layout->addWidget(searchButton);
-
-//         // Подключаем сигнал кнопки поиска к слоту для применения фильтра
-//         connect(searchButton, &QPushButton::clicked, this, [this, tableName, searchLineEdit]() {
-//             QString searchValue = searchLineEdit->text();
-//             QSqlTableModel *model = qobject_cast<QSqlTableModel*>(ui->tableView->model());
-//             if (model) {
-//                 model->setFilter("doctor_specialty LIKE '%" + searchValue + "%'");
-//                 model->select(); // Обновляем модель, чтобы применить фильтр
-//             }
-//         });
-//     }
-
-//     // Добавление фильтрации для таблицы Otdel по полю name_otdel
-//     if (tableName == "Reception") {
-//         // Создаем комбобокс для фильтрации
-//         QLabel *filterLabel = new QLabel("Фильтрация по ФИО докторов:");
-//         QComboBox *filterComboBox = new QComboBox();
-//         QPushButton *filterButton = new QPushButton(" Применить фильтрацию");
-//         QPushButton *clearFilterButton = new QPushButton("Очистить");
-
-//         // Заполнение комбобокса значениями из базы данных
-//         QString queryText = "SELECT DISTINCT doctorFullname_combox FROM Reception";
-//         QSqlQuery comboQuery(queryText);
-//         if (!comboQuery.exec()) {
-//             qDebug() << "Error executing query:" << comboQuery.lastError().text();
-//         } else {
-//             while (comboQuery.next()) {
-//                 QString value = comboQuery.value(0).toString();
-//                 filterComboBox->addItem(value);
-//             }
-//         }
-
-//         // Добавление элементов управления на форму
-//         layout->addWidget(filterLabel);
-//         layout->addWidget(filterComboBox);
-//         layout->addWidget(filterButton);
-//         layout->addWidget(clearFilterButton);
-
-//         // Подключение сигналов к слотам для применения и сброса фильтра по inhabitant_fullname
-//         connect(filterButton, &QPushButton::clicked, this, [this, tableName, filterComboBox]() {
-//             QString filterValue = filterComboBox->currentText();
-//             QSqlTableModel *model = qobject_cast<QSqlTableModel*>(ui->tableView->model());
-//             if (model) {
-//                 model->setFilter("doctorFullname_combox = '" + filterValue + "'");
-//             }
-//         });
-
-
-//         connect(clearFilterButton, &QPushButton::clicked, this, [this, tableName, filterComboBox]() {
-//             filterComboBox->setCurrentIndex(0); // Сбрасываем выбранный индекс
-//             QSqlTableModel *model = qobject_cast<QSqlTableModel*>(ui->tableView->model());
-//             if (model) {
-//                 model->setFilter("");
-//             }
-//         });
-
-//         QPushButton *sortByAscendingButton = new QPushButton("Сортировка по возрастанию");
-//         QPushButton *sortByDescendingButton = new QPushButton("Сортировка по убыванию");
-
-//         // Добавляем элементы управления на форму
-//         layout->addWidget(sortByAscendingButton);
-//         layout->addWidget(sortByDescendingButton);
-
-//         // Подключаем сигналы кнопок к слотам для установки сортировки
-//         connect(sortByAscendingButton, &QPushButton::clicked, this, [this, tableName]() {
-//             QSqlTableModel *model = qobject_cast<QSqlTableModel*>(ui->tableView->model());
-//             if (model) {
-//                 model->setSort(model->fieldIndex("admission_cost"), Qt::AscendingOrder);
-//                 model->select(); // Обновляем модель, чтобы применить сортировку
-//             }
-//         });
-
-//         connect(sortByDescendingButton, &QPushButton::clicked, this, [this, tableName]() {
-//             QSqlTableModel *model = qobject_cast<QSqlTableModel*>(ui->tableView->model());
-//             if (model) {
-//                 model->setSort(model->fieldIndex("admission_cost"), Qt::DescendingOrder);
-//                 model->select(); // Обновляем модель, чтобы применить сортировку
-//             }
-//         });
-
-//         QLabel *doctorLabel = new QLabel("Выбрать доктора:");
-//         QComboBox *doctorComboBox = new QComboBox();
-//         QPushButton *showButton = new QPushButton("ПОКАЗАТЬ");
-
-//         // Заполняем комбобокс именами врачей из базы данных
-//         QSqlQuery doctorQuery("SELECT DISTINCT doctorFullname_combox FROM Reception");
-//         while (doctorQuery.next()) {
-//             QString doctorName = doctorQuery.value(0).toString();
-//             doctorComboBox->addItem(doctorName);
-//         }
-
-//         // Добавляем элементы управления на форму
-//         layout->addWidget(doctorLabel);
-//         layout->addWidget(doctorComboBox);
-//         layout->addWidget(showButton);
-
-//         // Подключаем сигнал кнопки "SHOW" к слоту для вычисления суммы с учетом процента вычета из зарплаты
-//         connect(showButton, &QPushButton::clicked, this, [this, doctorComboBox]() {
-//             QString doctorName = doctorComboBox->currentText();
-//             int percent = 13; // Процент вычета
-//             QSqlQuery sumQuery;
-//             if (sumQuery.exec("SELECT SUM(admission_cost * (100 - " + QString::number(percent) + ") / 100) FROM Reception WHERE doctorFullname_combox = '" + doctorName + "'")) {
-//                 if (sumQuery.next()) {
-//                     double totalCost = sumQuery.value(0).toDouble();
-//                     QMessageBox::information(this, "зарплата врача", "зарплата врача " + doctorName + " с " + QString::number(percent) + "%  с процентами" + QString::number(totalCost) +" руб.");
-//                 }
-//             } else {
-//                 qDebug() << "Error executing query:" << sumQuery.lastError().text();
-//             }
-//         });
-
-
-//     }
-
-
-//     // Clear previous input layout and create a new inputWidget
-//     QWidget *inputWidget = new QWidget();
-//     inputWidget->setLayout(layout);
-
-//     // Remove previous inputWidget from the main input layout
-//     QLayoutItem *item;
-//     while ((item = ui->verticalLayout_2->takeAt(0)) != nullptr) {
-//         delete item->widget();
-//         delete item;
-//     }
-
-//     // Add the new inputWidget to the main input layout
-//     ui->verticalLayout_2->addWidget(inputWidget);
-
-//     // Add a QPushButton to submit data
-//     QPushButton *submitButton = new QPushButton("ДОБАВИТЬ");
-//     ui->verticalLayout_2->addWidget(submitButton);
-//     // Подключение кнопки update к слоту updateData
-//     // Удаление старых соединений
-//     disconnect(ui->pushUpdate, &QPushButton::clicked, nullptr, nullptr);
-//     disconnect(submitButton, &QPushButton::clicked, nullptr, nullptr);
-
-//     // Установка новых соединений
-//     connect(ui->pushUpdate, &QPushButton::clicked, this, [this, inputWidgets]() {
-//         this->updateData(inputWidgets);
-//     });
-//     connect(submitButton, &QPushButton::clicked, this, [this, inputWidgets, tableName]() {
-//         this->addData(inputWidgets, tableName);
-//     });
-
-//     // Update table view
-//     QSqlTableModel *model = new QSqlTableModel(this);
-//     model->setTable(tableName);
-//     model->select();
-//     ui->tableView->setModel(model); // Assuming you have a QTableView named tableView in your form
-// }
 
 void FormTable::addData(const QList<QPair<QString, QWidget*>>& inputWidgets, const QString& tableName) {
     if (userStatus_ == 2) {
         QMessageBox::critical(this, "Access Denied", "You don't have permission to delete data.");
         return;
     }
+
     QStringList fieldNames;
     QStringList fieldValues;
 
@@ -739,14 +527,35 @@ void FormTable::addData(const QList<QPair<QString, QWidget*>>& inputWidgets, con
         const QWidget* widget = pair.second;
 
         if (const QLineEdit* lineEdit = qobject_cast<const QLineEdit*>(widget)) {
+            // Проверяем, что поле не пустое
+            QString text = lineEdit->text();
+            if (text.isEmpty()) {
+                QMessageBox::critical(this, "Ошибка", "Поле '" + fieldName + "' пустое.");
+                return;
+            }
+            // Добавляем имя поля и его значение в списки
             fieldNames.append(fieldName);
-            fieldValues.append(lineEdit->text());
+            fieldValues.append(text);
         } else if (const QDateEdit* dateEdit = qobject_cast<const QDateEdit*>(widget)) {
+            // Проверяем, что поле не пустое
+            QDate date = dateEdit->date();
+            if (!date.isValid()) {
+                QMessageBox::critical(this, "Ошибка", "Поле '" + fieldName + "' пустое.");
+                return;
+            }
+            // Добавляем имя поля и его значение в списки
             fieldNames.append(fieldName);
-            fieldValues.append(dateEdit->date().toString("yyyy-MM-dd"));
+            fieldValues.append(date.toString("yyyy-MM-dd"));
         } else if (const QComboBox* comboBox = qobject_cast<const QComboBox*>(widget)) {
+            // Проверяем, что поле не пустое
+            QString currentText = comboBox->currentText();
+            if (currentText.isEmpty()) {
+                QMessageBox::critical(this, "Ошибка", "Поле '" + fieldName + "' пустое.");
+                return;
+            }
+            // Добавляем имя поля и его значение в списки
             fieldNames.append(fieldName);
-            fieldValues.append(comboBox->currentText());
+            fieldValues.append(currentText);
         }
     }
 
@@ -773,10 +582,10 @@ void FormTable::addData(const QList<QPair<QString, QWidget*>>& inputWidgets, con
 
     // Выполняем SQL-запрос
     if (query.exec()) {
-        QMessageBox::information(this, "Success", "Data added successfully.");
+        QMessageBox::information(this, "Удачно", "Данные были добавлены.");
         updateTableView(tableName); // Обновляем представление таблицы
     } else {
-        QMessageBox::critical(this, "Error", "Failed to add data: " + query.lastError().text());
+        QMessageBox::critical(this, "Ошибка", "ОШибка добавления данных" + query.lastError().text());
     }
 }
 

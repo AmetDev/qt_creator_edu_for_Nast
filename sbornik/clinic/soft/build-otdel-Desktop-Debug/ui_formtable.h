@@ -40,31 +40,31 @@ public:
         FormTable->resize(1384, 816);
         tableView = new QTableView(FormTable);
         tableView->setObjectName(QString::fromUtf8("tableView"));
-        tableView->setGeometry(QRect(200, 60, 821, 571));
+        tableView->setGeometry(QRect(40, 60, 981, 571));
         verticalLayoutWidget = new QWidget(FormTable);
         verticalLayoutWidget->setObjectName(QString::fromUtf8("verticalLayoutWidget"));
-        verticalLayoutWidget->setGeometry(QRect(0, 50, 191, 581));
+        verticalLayoutWidget->setGeometry(QRect(70, 0, 881, 51));
         verticalLayout = new QVBoxLayout(verticalLayoutWidget);
         verticalLayout->setObjectName(QString::fromUtf8("verticalLayout"));
         verticalLayout->setContentsMargins(0, 0, 0, 0);
         verticalLayoutWidget_2 = new QWidget(FormTable);
         verticalLayoutWidget_2->setObjectName(QString::fromUtf8("verticalLayoutWidget_2"));
-        verticalLayoutWidget_2->setGeometry(QRect(1030, 90, 301, 471));
+        verticalLayoutWidget_2->setGeometry(QRect(1030, 90, 301, 531));
         verticalLayout_2 = new QVBoxLayout(verticalLayoutWidget_2);
         verticalLayout_2->setObjectName(QString::fromUtf8("verticalLayout_2"));
         verticalLayout_2->setContentsMargins(0, 0, 0, 0);
         verticalLayoutWidget_3 = new QWidget(FormTable);
         verticalLayoutWidget_3->setObjectName(QString::fromUtf8("verticalLayoutWidget_3"));
-        verticalLayoutWidget_3->setGeometry(QRect(1060, 560, 111, 41));
+        verticalLayoutWidget_3->setGeometry(QRect(1030, 630, 111, 21));
         verticalLayout_3 = new QVBoxLayout(verticalLayoutWidget_3);
         verticalLayout_3->setObjectName(QString::fromUtf8("verticalLayout_3"));
         verticalLayout_3->setContentsMargins(0, 0, 0, 0);
         labelTable = new QLabel(FormTable);
         labelTable->setObjectName(QString::fromUtf8("labelTable"));
-        labelTable->setGeometry(QRect(580, 640, 101, 17));
+        labelTable->setGeometry(QRect(460, 640, 101, 17));
         pushUpdate = new QPushButton(FormTable);
         pushUpdate->setObjectName(QString::fromUtf8("pushUpdate"));
-        pushUpdate->setGeometry(QRect(1210, 570, 111, 21));
+        pushUpdate->setGeometry(QRect(1030, 660, 101, 25));
 
         retranslateUi(FormTable);
 
