@@ -154,7 +154,7 @@ void FormTable::deleteDataById(const QString& tableName, int id) {
         return;
     }
     // Получаем текст из labelTable
-    QString labelText = ui->labelTable->text().toLower(); // Преобразуем текст в нижний регистр
+    QString labelText = ui->labelTable->text(); // Преобразуем текст в нижний регистр
 
     // Создаем SQL-запрос для удаления данных из таблицы с использованием имени таблицы
 
@@ -198,7 +198,7 @@ void FormTable::deleteDataById(const QString& tableName, int id) {
 
 // В конструкторе FormTable или в другом удобном месте
 void FormTable::updateData(const QList<QPair<QString, QWidget*>>& inputWidgets) {
-    QString tableName = ui->labelTable->text().toLower(); // Получаем имя текущей таблицы
+    QString tableName = ui->labelTable->text(); // Получаем имя текущей таблицы
     QModelIndex index = ui->tableView->selectionModel()->currentIndex();
     int id = index.sibling(index.row(), 0).data().toInt(); // Assuming id is in the first column
 
@@ -228,7 +228,7 @@ void FormTable::updateData(const QList<QPair<QString, QWidget*>>& inputWidgets) 
         return;
     }
 
-    QString labelText = ui->labelTable->text().toLower(); // Преобразуем текст в нижний регистр
+    QString labelText = ui->labelTable->text(); // Преобразуем текст в нижний регистр
 
     // Создаем SQL-запрос для обновления данных
     QString name_id = (labelText == "workers") ? "worker" : labelText;
@@ -312,16 +312,16 @@ void FormTable::updateTableView(const QString& tableName) {
         if (fieldName.startsWith("data")) {
             QDateEdit *dateEdit = new QDateEdit();
             widget = dateEdit;
-        } else if (fieldName.contains("combox")) {
+        } else if (fieldName.contains("выбор_из_списк")) {
             QComboBox *comboBox = new QComboBox();
             // Execute SQL query to populate comboBox
             QString queryText;
-            if (fieldName == "parent_fullname_combox") {
-                queryText = "SELECT DISTINCT parent_fullname FROM Parents";
-            } else  if (fieldName == "additional_info_combox") {
-                queryText = "SELECT DISTINCT additional_info  FROM AdditionalInfo";
-            } else  if (fieldName == "specialties_combox") {
-                queryText = "SELECT DISTINCT specialty  FROM specialties";
+            if (fieldName == "специальности_выбор_из_списка") {
+                queryText = "SELECT DISTINCT специальность FROM Специальности";
+            } else  if (fieldName == "дополнительная_информация_выбор_из_списка") {
+                queryText = "SELECT DISTINCT дополнительная_информация  FROM ДополнительнаяИнформация";
+            } else  if (fieldName == "родитель_полное_имя_выбор_из_списка") {
+                queryText = "SELECT DISTINCT полное_имя_родителя  FROM Родители";
             }
             qDebug() << "Executing query:" << queryText;
             QSqlQuery comboQuery(queryText);
